@@ -3,6 +3,8 @@ scenegraph_nodes_includes = include_directories('.')
 lib_scenegraph_nodes = static_library(
 	'scenegraph_nodes',
 	files(
+		'field.cpp',
+		'input.cpp',
 		'lifecycle.cpp',
 		'model.cpp',
 	),

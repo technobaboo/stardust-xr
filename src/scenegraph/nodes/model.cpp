@@ -6,7 +6,7 @@ ModelInterface::ModelInterface() {
 	STARDUSTXR_NODE_METHOD("createFromFile", &ModelInterface::createFromFile)
 }
 
-std::vector<uint8_t> ModelInterface::createFromFile(uint sessionID, flexbuffers::Reference data, bool returnValue) {
+std::vector<uint8_t> ModelInterface::createFromFile(uint sessionID, flexbuffers::Reference data, bool) {
 	flexbuffers::Vector vector = data.AsVector();
 
 	std::string name = vector[0].AsString().str();
@@ -34,16 +34,18 @@ std::vector<uint8_t> ModelInterface::createFromFile(uint sessionID, flexbuffers:
 	};
 
 
-	ModelNode *modelNode = new ModelNode();
-	modelNode->parent = this;
-	modelNode->sessionID = sessionID;
-	modelNode->modelPath = path;
-	modelNode->position = position;
-	modelNode->rotation = rotation;
-	modelNode->scale = scale;
-	modelNode->queued = true;
-	modelNode->transformDirty();
-	children[name.c_str()] = modelNode;
+	Model *model = new Model();
+	model->ready = false;
+	model->parent = this;
+	model->sessionID = sessionID;
+	model->modelPath = path;
+	model->position = position;
+	model->rotation = rotation;
+	model->scale = scale;
+	model->queued = true;
+	model->transformDirty();
+	children[name] = model;
+	model->ready = true;
 
 	return std::vector<uint8_t>();
 }

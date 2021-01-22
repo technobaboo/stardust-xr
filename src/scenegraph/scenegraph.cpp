@@ -1,4 +1,5 @@
 #include "scenegraph.hpp"
+#include "../globals.h"
 
 namespace StardustXRServer {
 
@@ -19,11 +20,18 @@ std::vector<uint8_t> Scenegraph::executeMethod(int sessionID, std::string path, 
 	return this->executeMethod(sessionID, path, method, args, true);
 }
 
+void Scenegraph::executeRemoteMethod(uint sessionID, std::string remotePath, std::string remoteMethod, std::vector<uint8_t> args, void *extraData, ServerCallback callback) {
+	messengerManager.messengers[sessionID]->executeRemoteMethod(remotePath.c_str(), remoteMethod.c_str(), args, [&](flexbuffers::Reference data) {
+		callback(sessionID, data, extraData);
+	});
+}
+
 void Scenegraph::handleMessengerDeletion(uint sessionID) {
 	PropagateFunction messengerDeletionFunction = [&](std::string name, Node *node) {
-		if(node->sessionID == sessionID) {
-			node->parent->children.erase(name);
+		if(node->sessionID == sessionID && node->parent) {
+			Node *nodeParent = node->parent;
 			delete node;
+			nodeParent->children.erase(name);
 			return false;
 		} else {
 			node->handleMessengerDeletion(sessionID);
@@ -44,6 +52,8 @@ std::vector<uint8_t> Scenegraph::executeMethod(int sessionID, std::string path, 
 		}
 	});
 
+	while(currentNode == nullptr) {}
+
 	if(currentNode->methods[method] == nullptr) {
 		printf("Method %s on node %s not found", method.c_str(), path.c_str());
 		return std::vector<uint8_t>();
@@ -55,7 +65,9 @@ void Scenegraph::addNode(std::string path, Node *node) {
 	//Get the name of the node to create
 	std::string lastNodeName = path.substr(path.find_last_of("/")+1);
 	Node *currentNode = &root;
+
 	this->onPathStep(path, [&](std::string pathStep) {
+
 		if(pathStep == lastNodeName)
 			currentNode->children[pathStep] = node;
 		else if(currentNode->children[pathStep] == nullptr)
@@ -63,7 +75,24 @@ void Scenegraph::addNode(std::string path, Node *node) {
 
 		currentNode->children[pathStep]->parent = currentNode;
 		currentNode = currentNode->children[pathStep];
+
 	});
+}
+
+Node *Scenegraph::findNode(std::string path) {
+	std::string lastNodeName = path.substr(path.find_last_of("/")+1);
+	Node *currentNode = &root;
+	bool doesNotExist = false;
+
+	this->onPathStep(path, [&](std::string pathStep) {
+		if(!doesNotExist)
+			currentNode = currentNode->children[pathStep];
+
+		if(!doesNotExist && currentNode == nullptr)
+			doesNotExist = true;
+	});
+
+	return currentNode;
 }
 
 } // namespace StardustXRServer

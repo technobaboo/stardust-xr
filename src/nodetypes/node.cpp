@@ -3,9 +3,10 @@
 namespace StardustXRServer {
 
 void Node::propagate(std::string name, PropagateFunction &function) {
-	if(function(name, this)) {
+	if(ready && function(name, this)) {
 		for(const auto &child : children) {
-			child.second->propagate(child.first, function);
+			if(child.second)
+				child.second->propagate(child.first, function);
 
 			if(children.size() == 0)
 				break;
